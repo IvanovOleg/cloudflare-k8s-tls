@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudflare-k8s-tls
+spec:
+  selector:
+    app: cloudflare-k8s-tls
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

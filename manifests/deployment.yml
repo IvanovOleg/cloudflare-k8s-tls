@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflare-k8s-tls
+  labels:
+    app: cloudflare-k8s-tls
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudflare-k8s-tls
+  template:
+    metadata:
+      labels:
+        app: cloudflare-k8s-tls
+    spec:
+      containers:
+        - name: cloudflare-k8s-tls
+          image: olivanov/cloudflare-k8s-tls:latest
+          ports:
+            - containerPort: 80
