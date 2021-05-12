@@ -6,15 +6,39 @@ on:
   workflow_dispatch:
 
 jobs:
-  ci:
-    name: ci
+  build:
+    name: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       
+      - name: Install
+        run: yarn install
+      
       - name: Build
         run: yarn build
+      
+      - name: Login
+        uses: docker/login-action@v1 
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          tags: olivanov/cloudflare-k8s-tls:latest
+
+  deploy:
+    name: deploy
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
       - name: Context
         uses: azure/k8s-set-context@v1
@@ -23,3 +47,24 @@ jobs:
           kubeconfig: ${{ secrets.KUBECONFIG }}
           context: docker-desktop
         id: setcontext
+
+      - name: Secret
+        uses: Azure/k8s-create-secret@v1
+        with:
+          container-registry-url:  https://index.docker.io/v1/
+          container-registry-username: ${{ secrets.DOCKERHUB_USERNAME }}
+          container-registry-password: ${{ secrets.DOCKERHUB_TOKEN }}
+          secret-name: pull-secret
+
+      - name: Deploy
+        uses: Azure/k8s-deploy@v1.4
+        with:
+          namespace: default
+          manifests: |
+              manifests/deployment.yml
+              manifests/service.yml
+              manifests/ingress.yml
+          images: https://index.docker.io/v1/olivanov/cloudflare-k8s-tls:latest
+          imagepullsecrets: |
+            pull-secret
+          kubectl-version: latest
